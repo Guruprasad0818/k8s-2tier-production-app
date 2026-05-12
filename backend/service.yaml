@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: production
+spec:
+  type: ClusterIP        # ONLY accessible inside cluster — NOT from browser
+  selector:
+    app: backend
+  ports:
+  - port: 5000
+    targetPort: 5000  
