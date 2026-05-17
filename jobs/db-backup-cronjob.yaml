@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: db-backup
+  namespace: production
+
+spec:
+  schedule: "0 2 * * *"
+
+  timeZone: "Asia/Kolkata"
+
+  concurrencyPolicy: Forbid
+
+  startingDeadlineSeconds: 3600
+
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+
+      template:
+        spec:
+          restartPolicy: OnFailure
+
+          containers:
+            - name: db-backup
+              image: busybox:1.35
+
+              command:
+                - sh
+                - -c
+                - |
+                  echo "=== DB BACKUP STARTING ==="
+                  echo "Time: $(date)"
+                  echo "Backup file: /backup/db-$(date +%Y%m%d-%H%M).tar.gz"
+                  echo "Connecting to $DB_USERNAME@database..."
+                  sleep 10
+                  echo "Tables backed up: users, orders, products"
+                  echo "Backup size: ~42MB"
+                  echo "=== BACKUP COMPLETE ==="
+
+              envFrom:
+                - secretRef:
+                    name: backend-secret
+
+              resources:
+                requests:
+                  memory: "32Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"

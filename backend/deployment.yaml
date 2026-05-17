@@ -1,79 +1,107 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: backend
   namespace: production
   labels:
     app: backend
     tier: api
+
 spec:
   replicas: 2
+
   selector:
     matchLabels:
       app: backend
+
   template:
     metadata:
       labels:
         app: backend
-    spec:
 
-      # Node Affinity — prefer worker-2 for backend (soft rule)
+    spec:
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - production-worker2  # different node from frontend!
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - production-worker2
 
-      # Toleration for backend taint on worker-2
       tolerations:
-      - key: "app"
-        operator: "Equal"
-        value: "backend"      # matches taint on worker-2
-        effect: "NoSchedule"
+        - key: "app"
+          operator: "Equal"
+          value: "backend"
+          effect: "NoSchedule"
+
+      volumes:
+        - name: backend-storage
+          persistentVolumeClaim:
+            claimName: backend-pvc
 
       containers:
-      - name: backend
-        image: python:3.11-slim   # slim = smaller image size
-        command:
-        - python
-        - -c
-        - |
-          from http.server import HTTPServer, BaseHTTPRequestHandler
-          import json, os
-          class Handler(BaseHTTPRequestHandler):
-            def do_GET(self):
-              self.send_response(200)
-              self.send_header('Content-type','application/json')
-              self.end_headers()
-              data = {'status':'ok','service':'backend','pod':os.environ.get('HOSTNAME','unknown')}
-              self.wfile.write(json.dumps(data).encode())
-            def log_message(self, format, *args): pass
-          HTTPServer(('0.0.0.0',5000), Handler).serve_forever()
-        ports:
-        - containerPort: 5000
+        - name: backend
+          image: python:3.11-slim
 
-        resources:
-          requests:
-            memory: "128Mi"  # Python needs more RAM than nginx
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "300m"
+          envFrom:
+            - secretRef:
+                name: backend-secret
 
-        readinessProbe:
-          tcpSocket:           # just check if port 5000 is open
-            port: 5000
-          initialDelaySeconds: 10  # python:slim pulls package, needs more time
-          periodSeconds: 10
+          command:
+            - python
+            - -c
+            - |
+              from http.server import HTTPServer, BaseHTTPRequestHandler
+              import json, os
 
-        livenessProbe:
-          tcpSocket:
-            port: 5000
-          initialDelaySeconds: 15
-          periodSeconds: 20
-          failureThreshold: 3
+              class Handler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                  self.send_response(200)
+                  self.send_header('Content-type','application/json')
+                  self.end_headers()
+
+                  data = {
+                    'status': 'ok',
+                    'service': 'backend',
+                    'pod': os.environ.get('HOSTNAME', 'unknown'),
+                    'db_user': os.environ.get('DB_USERNAME', 'missing')
+                  }
+
+                  self.wfile.write(json.dumps(data).encode())
+
+                def log_message(self, format, *args):
+                  pass
+
+              HTTPServer(('0.0.0.0', 5000), Handler).serve_forever()
+
+          ports:
+            - containerPort: 5000
+
+          volumeMounts:
+            - name: backend-storage
+              mountPath: /app/data
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3

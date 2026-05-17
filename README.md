@@ -200,3 +200,41 @@ Built following **Cloud With VarJosh — CKA Certification Course 2025** (Day 1�
 
 ---
 
+---
+
+## 🚀 Project 2 — Storage + ConfigMaps + Secrets + DaemonSet + CronJob
+
+### What was added in Project 2
+
+**ConfigMap** — Nginx config and app environment variables injected at runtime without rebuilding the Docker image. Changes to config no longer require a new image build.
+
+**Secrets** — Database credentials and API keys stored securely as base64-encoded Kubernetes Secrets. Never stored in code or Git.
+
+**emptyDir** — Temporary shared volume between the main container and sidecar log-collector. Both containers in the same pod read and write the same folder.
+
+**PersistentVolume + PVC** — Real disk storage that survives pod restarts. Backend data is written to `/app/data` which remains intact even if the pod is deleted and recreated.
+
+**DaemonSet** — Log agent automatically deployed to every node in the cluster. When a new node is added, the pod appears automatically.
+
+**Job** — Database migration script that runs exactly once on deploy and stops. Uses `restartPolicy: OnFailure`.
+
+**CronJob** — Automated database backup scheduled at 2AM every night using cron schedule `0 2 * * *`.
+
+### New files added
+- `config/frontend-configmap.yaml`
+- `config/backend-secret.yaml`
+- `storage/persistentvolume.yaml`
+- `storage/persistentvolumeclaim.yaml`
+- `jobs/log-agent-daemonset.yaml`
+- `jobs/db-migration-job.yaml`
+- `jobs/db-backup-cronjob.yaml`
+
+### Deploy Project 2
+```bash
+kubectl apply -f config/
+kubectl apply -f storage/
+kubectl apply -f frontend/
+kubectl apply -f backend/
+kubectl apply -f jobs/
+kubectl get all -n production
+```

@@ -21,7 +21,6 @@ spec:
         app: frontend
 
     spec:
-      # Node Affinity: Prefer scheduling on productions-worker
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -33,20 +32,40 @@ spec:
                     values:
                       - productions-worker
 
-      # Toleration: Allow pods to run on nodes tainted with app=frontend:NoSchedule
       tolerations:
         - key: "app"
           operator: "Equal"
           value: "frontend"
           effect: "NoSchedule"
 
+      volumes:
+        - name: shared-logs
+          emptyDir: {}
+
+        - name: nginx-config-vol
+          configMap:
+            name: frontend-config
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+
       containers:
-        # Main Nginx Container
         - name: nginx
           image: nginx:1.25-alpine
 
           ports:
             - containerPort: 80
+
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+
+          volumeMounts:
+            - name: nginx-config-vol
+              mountPath: /etc/nginx/conf.d
+
+            - name: shared-logs
+              mountPath: /var/log/app
 
           resources:
             requests:
@@ -71,14 +90,17 @@ spec:
             periodSeconds: 15
             failureThreshold: 3
 
-        # Sidecar Log Collector
         - name: log-collector
           image: busybox:1.35
 
           command:
             - sh
             - -c
-            - while true; do echo "[LOG] Frontend alive $(date)"; sleep 30; done
+            - while true; do tail -f /logs/access.log 2>/dev/null; sleep 5; done
+
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /logs
 
           resources:
             requests:
