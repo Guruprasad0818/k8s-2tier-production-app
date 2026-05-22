@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-sa-binding
+  namespace: production
+subjects:
+- kind: ServiceAccount    # NOT User this time — it's a ServiceAccount
+  name: backend-sa
+  namespace: production
+roleRef:
+  kind: Role
+  name: pod-reader          # can only read pods — nothing else
+  apiGroup: rbac.authorization.k8s.io

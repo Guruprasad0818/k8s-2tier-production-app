@@ -21,6 +21,7 @@ spec:
         app: backend
 
     spec:
+      serviceAccountName: backend-sa
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

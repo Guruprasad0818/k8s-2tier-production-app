@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: production     # Role is namespace-scoped
+rules:
+- apiGroups: [""]             # "" = core API group (pods, services, etc)
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]  # read-only — cannot create or delete
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
