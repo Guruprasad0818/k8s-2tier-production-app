@@ -1,0 +1,7 @@
+apiVersion: v2               # v2 = Helm 3. v1 = Helm 2 (legacy, avoid)
+name: myapp                   # chart name — used in helm install commands
+description: Production-grade 2-Tier K8s app — CKA Project 4
+type: application             # "application" (deployable) or "library" (shared helpers)
+version: 1.0.0               # chart version — bump when you change templates/Chart.yaml
+appVersion: "1.0.0"          # app version — tracks your Docker image version
+                             # chart version ≠ appVersion. Chart can be v1.2.0, app v3.5.1

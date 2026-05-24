@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-service   # e.g. myapp-prod-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}     # NodePort / ClusterIP / LoadBalancer from values.yaml
+  selector:
+    app: {{ .Release.Name }}           # matches pod labels from deployment template
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: 80
+    protocol: TCP
+    name: http
+    # Only add nodePort field if service type is NodePort
+    {{- if eq .Values.service.type "NodePort" }}
+    nodePort: {{ .Values.service.nodePort }}   # e.g. 30080
+    {{- end }}

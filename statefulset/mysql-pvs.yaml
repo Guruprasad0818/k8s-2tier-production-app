@@ -1,0 +1,55 @@
+# StatefulSet auto-creates 3 PVCs:
+#   mysql-data-mysql-0 → needs a PV to bind to → mysql-pv-0
+#   mysql-data-mysql-1 → needs a PV to bind to → mysql-pv-1
+#   mysql-data-mysql-2 → needs a PV to bind to → mysql-pv-2
+#
+# All 3 PVs in ONE file separated by --- (three dashes = YAML document separator)
+# Apply this FIRST before statefulset: kubectl apply -f statefulset/mysql-pvs.yaml
+
+# ─── PV for mysql-0 ──────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-0             # unique name — cluster-wide (no namespace)
+spec:
+  capacity:
+    storage: 1Gi              # matches volumeClaimTemplates request in statefulset
+  accessModes:
+  - ReadWriteOnce             # matches PVC accessMode — one node at a time
+  persistentVolumeReclaimPolicy: Retain   # keep data even if PVC is deleted
+  storageClassName: manual    # MUST match storageClassName in volumeClaimTemplates
+  hostPath:
+    path: /data/mysql-0       # directory on the Kind node — auto-created
+    type: DirectoryOrCreate    # creates the dir if it doesn't exist
+---
+# ─── PV for mysql-1 ──────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /data/mysql-1       # different path from mysql-0 — each pod needs its own dir
+    type: DirectoryOrCreate
+---
+# ─── PV for mysql-2 ──────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-2
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /data/mysql-2
+    type: DirectoryOrCreate

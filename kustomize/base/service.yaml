@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  # No namespace here — the overlay's kustomization.yaml sets the namespace
+spec:
+  selector:
+    app: frontend               # matches pod labels in deployment.yaml
+  ports:
+  - port: 80                    # Service port — what other pods call
+    targetPort: 80              # Container port — what nginx listens on
+    protocol: TCP
+  type: ClusterIP              # Base: ClusterIP (internal only)
+                               # Prod overlay can patch this to NodePort or LoadBalancerb  
+
+                               

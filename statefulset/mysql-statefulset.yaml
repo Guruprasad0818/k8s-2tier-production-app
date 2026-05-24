@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: StatefulSet              # NOT Deployment — StatefulSet!
+metadata:
+  name: mysql
+  namespace: production
+spec:
+  serviceName: "mysql"         # MUST match the headless service name exactly
+                               # This is what enables pod-0.mysql DNS entries
+  replicas: 3                  # Creates mysql-0, mysql-1, mysql-2
+  selector:
+    matchLabels:
+      app: mysql
+
+  # ─── updateStrategy — how pods are updated ────────────────────────
+  # RollingUpdate: update one pod at a time (2→1→0 order for StatefulSet)
+  # OnDelete: only update pod when you manually delete it (manual control)
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0             # Update ALL pods (partition=0 means update ordinals >= 0)
+                               # partition=2 would only update mysql-2, keeping 0 and 1 unchanged
+                               # Useful for canary updates on databases
+
+  # ─── podManagementPolicy — startup/shutdown behavior ─────────────
+  # OrderedReady (default): strict ordering — 0 must be Ready before 1 starts
+  # Parallel: all pods start simultaneously (NOT for databases)
+  podManagementPolicy: OrderedReady   # default — mysql-0 starts first, must be Ready before mysql-1
+
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      # initContainer: sets up data directory permissions before MySQL starts
+      # MySQL needs /var/lib/mysql owned by the mysql user (uid 999)
+      initContainers:
+      - name: init-mysql
+        image: busybox:1.35
+        command: ["sh", "-c", "chown -R 999:999 /var/lib/mysql"]
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        securityContext:
+          runAsUser: 0          # Run as root to do the chown
+
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        # Required: MySQL root password
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret    # from Project 2!
+              key: DB_PASSWORD
+        # Create an app-specific database on first start
+        - name: MYSQL_DATABASE
+          value: "appdb"           # MySQL creates this database automatically
+        # Create an app user (not root) for the backend to connect with
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: DB_USERNAME
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: DB_PASSWORD
+        ports:
+        - containerPort: 3306
+          name: mysql
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql     # MySQL data directory
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "mysqladmin ping -u root -p$MYSQL_ROOT_PASSWORD 2>/dev/null"
+          initialDelaySeconds: 20   # MySQL takes time to initialize on first start
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "mysqladmin ping -u root -p$MYSQL_ROOT_PASSWORD 2>/dev/null"
+          initialDelaySeconds: 30
+          periodSeconds: 20
+
+  # ─── volumeClaimTemplates — auto-creates one PVC per pod ──────────
+  # This is what makes StatefulSet different from Deployment.
+  # For 3 replicas, Kubernetes creates:
+  #   mysql-data-mysql-0  (bound to mysql-0 forever)
+  #   mysql-data-mysql-1  (bound to mysql-1 forever)
+  #   mysql-data-mysql-2  (bound to mysql-2 forever)
+  # If mysql-1 is deleted and recreated, it REBINDS to mysql-data-mysql-1
+  # Data is always safe — even if all pods are deleted, PVCs remain.
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data           # PVC name will be: mysql-data-mysql-0, mysql-data-mysql-1...
+    spec:
+      accessModes: ["ReadWriteOnce"]  # One node at a time — correct for MySQL
+      storageClassName: manual      # from our storage/ folder (Project 2)
+      resources:
+        requests:
+          storage: 1Gi             # Each pod gets its own 1Gi — 3 pods = 3Gi total

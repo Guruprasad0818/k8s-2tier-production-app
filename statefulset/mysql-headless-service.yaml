@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql                  # MUST match StatefulSet's spec.serviceName field
+  namespace: production
+  labels:
+    app: mysql
+spec:
+  clusterIP: None              # "None" = headless service — no virtual IP, no load balancing
+                               # Instead: each pod gets its OWN DNS A record
+                               # mysql-0.mysql.production.svc.cluster.local → pod IP of mysql-0
+                               # mysql-1.mysql.production.svc.cluster.local → pod IP of mysql-1
+                               # mysql-2.mysql.production.svc.cluster.local → pod IP of mysql-2
+  publishNotReadyAddresses: true   # Include pods in DNS even if not yet Ready
+                               # Needed during initialization — mysql-1 needs to reach mysql-0
+                               # while mysql-0 is still starting up
+  selector:
+    app: mysql                  # selects all mysql pods
+  ports:
+  - port: 3306
+    targetPort: 3306
+    name: mysql

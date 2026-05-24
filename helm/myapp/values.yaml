@@ -1,0 +1,45 @@
+# Every value here can be overridden at install/upgrade time with:
+# --set replicaCount=5  OR  -f my-custom-values.yaml
+# These are the DEFAULTS — what gets used if you don't override
+
+replicaCount: 2
+
+image:
+  repository: nginx
+  tag: "1.25-alpine"
+  pullPolicy: IfNotPresent    # IfNotPresent: don't pull if image already on node
+                             # Always: always pull (use for :latest tag)
+                             # Never: only use local image (air-gapped envs)
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30090
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "200m"
+    memory: "128Mi"
+
+autoscaling:
+  enabled: true              # templates/hpa.yaml checks this with {{ if .Values.autoscaling.enabled }}
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+namespace: production
+
+livenessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 5
+  periodSeconds: 10
