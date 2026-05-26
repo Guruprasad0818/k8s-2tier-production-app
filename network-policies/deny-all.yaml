@@ -1,0 +1,12 @@
+# Best practice: deny all first, then explicitly allow what's needed
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: production
+spec:
+  podSelector: {}        # {} = applies to ALL pods in namespace
+  policyTypes:
+  - Ingress              # block all incoming traffic
+  - Egress               # block all outgoing traffic
+  # NO rules = nothing is allowed. Everything blocked.

@@ -31,6 +31,7 @@ spec:
       labels:
         app: mysql
     spec:
+      priorityClassName: critical-db
       # initContainer: sets up data directory permissions before MySQL starts
       # MySQL needs /var/lib/mysql owned by the mysql user (uid 999)
       initContainers:

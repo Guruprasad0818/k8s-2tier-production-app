@@ -1,0 +1,26 @@
+# Critical — database must always run
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: critical-db
+value: 1000000           # highest number = highest priority
+globalDefault: false
+description: "Database pods — evict others before these"
+---
+# High — backend API is important
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-backend
+value: 500000
+globalDefault: false
+description: "Backend API pods"
+---
+# Normal — frontend nginx can be evicted
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: normal-frontend
+value: 100000
+globalDefault: true       # all pods without priority get this by default
+description: "Frontend web pods"

@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - # Backend ONLY accepts traffic from frontend pods
+    from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - port: 5000
+  egress:
+  - # Backend can ONLY talk to MySQL on port 3306
+    to:
+    - podSelector:
+        matchLabels:
+          app: mysql
+    ports:
+    - port: 3306
+  - # Allow DNS
+    ports:
+    - port: 53
+      protocol: UDP

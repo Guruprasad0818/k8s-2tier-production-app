@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend        # applies to frontend pods
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - # Allow traffic from Ingress controller only
+    from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - port: 80
+  egress:
+  - # Frontend can ONLY talk to backend on port 5000
+    to:
+    - podSelector:
+        matchLabels:
+          app: backend
+    ports:
+    - port: 5000
+  - # Allow DNS resolution (CoreDNS on port 53)
+    ports:
+    - port: 53
+      protocol: UDP

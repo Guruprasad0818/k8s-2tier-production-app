@@ -21,6 +21,7 @@ spec:
         app: backend
 
     spec:
+      priorityClassName: high-backend
       serviceAccountName: backend-sa
       affinity:
         nodeAffinity:

@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: myapp-ingress
+  namespace: production
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - myapp.local
+    secretName: tls-secret
+  rules:
+  - host: myapp.local
+    http:
+      paths:
+      - path: /app(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend-services
+            port:
+              number: 80
+      - path: /api(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 5000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-services
+            port:
+              number: 80

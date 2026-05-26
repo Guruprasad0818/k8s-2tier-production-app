@@ -1,12 +1,21 @@
-apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
-
+apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
-  - role: control-plane
-    extraPortMappings:
-      - containerPort: 30080
-        hostPort: 30080
-        protocol: TCP
+- role: control-plane
+  # ADD THESE LINES — exposes ports 80 and 443 to your laptop
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80          # your laptop port 80 → cluster port 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443         # your laptop port 443 → cluster port 443
+    protocol: TCP
+- role: worker           # worker-1: frontend pods
+- role: worker           # worker-2: backend pods
 
-  - role: worker
-  - role: worker
